@@ -1,61 +1,45 @@
-# template-for-proposals
+# proposal-faster-promise-adoption
 
-A repository template for ECMAScript proposals.
+The Faster Promise Adoption proposal aims to reduce the number of ticks
+required for an outer promise to adopt the state of an inner promise.
 
-## Before creating a proposal
+Champions: [@jridgewell][jridgewell], (and you?)
 
-Please ensure the following:
-  1. You have read the [process document](https://tc39.github.io/process-document/)
-  1. You have reviewed the [existing proposals](https://github.com/tc39/proposals/)
-  1. You are aware that your proposal requires being a member of TC39, or locating a TC39 delegate to "champion" your proposal
+Author: [@jridgewell][jridgewell]
 
-## Create your proposal repo
+Status: [Stage 1](https://tc39.es/process-document/)
 
-Follow these steps:
-  1. Click the green ["use this template"](https://github.com/tc39/template-for-proposals/generate) button in the repo header. (Note: Do not fork this repo in GitHub's web interface, as that will later prevent transfer into the TC39 organization)
-  1. Update the biblio to the latest version: `npm install --save-dev --save-exact @tc39/ecma262-biblio@latest`.
-  1. Go to your repo settings “Options” page, under “GitHub Pages”, and set the source to the **main branch** under the root (and click Save, if it does not autosave this setting)
-      1. check "Enforce HTTPS"
-      1. On "Options", under "Features", Ensure "Issues" is checked, and disable "Wiki", and "Projects" (unless you intend to use Projects)
-      1. Under "Merge button", check "automatically delete head branches"
-<!--
-  1. Avoid merge conflicts with build process output files by running:
-      ```sh
-      git config --local --add merge.output.driver true
-      git config --local --add merge.output.driver true
-      ```
-  1. Add a post-rewrite git hook to auto-rebuild the output on every commit:
-      ```sh
-      cp hooks/post-rewrite .git/hooks/post-rewrite
-      chmod +x .git/hooks/post-rewrite
-      ```
--->
-  3. ["How to write a good explainer"][explainer] explains how to make a good first impression.
+## Problem
 
-      > Each TC39 proposal should have a `README.md` file which explains the purpose
-      > of the proposal and its shape at a high level.
-      >
-      > ...
-      >
-      > The rest of this page can be used as a template ...
+```javascript
+const outer = new Promise(res => {
+  const inner = Promise.resolve(1);
+  res(inner);
+});
+```
 
-      Your explainer can point readers to the `index.html` generated from `spec.emu`
-      via markdown like
+In the current specification, it requires 2 ticks for the outer promise
+to finally "settle" with the inner promise's `1` value. This comes up in
+initial promise resolution (like above), chained promises `p.then(() =>
+Promise.resolve(1))`, and with async functions:
 
-      ```markdown
-      You can browse the [ecmarkup output](https://ACCOUNT.github.io/PROJECT/)
-      or browse the [source](https://github.com/ACCOUNT/PROJECT/blob/HEAD/spec.emu).
-      ```
+```javascript
+// Directly returning a promise settles `direct` after 2 ticks.
+const direct = (async () => Promise.resolve(1))();
 
-      where *ACCOUNT* and *PROJECT* are the first two path elements in your project's Github URL.
-      For example, for github.com/**tc39**/**template-for-proposals**, *ACCOUNT* is "tc39"
-      and *PROJECT* is "template-for-proposals".
+// Returning an awaited promise's value settles `awaited` after 1 ticks.
+const awaited = (async () => await Promise.resolve(1))();
+```
 
+Surprisingly, it's actually faster to `return await promise` than to
+`return promise`!
 
-## Maintain your proposal repo
+## Proposal
 
-  1. Make your changes to `spec.emu` (ecmarkup uses HTML syntax, but is not HTML, so I strongly suggest not naming it ".html")
-  1. Any commit that makes meaningful changes to the spec, should run `npm run build` and commit the resulting output.
-  1. Whenever you update `ecmarkup`, run `npm run build` and commit any changes that come from that dependency.
+We'd like to make "fast path" for promise adoption that allows native
+promises to quickly adopt the state of another native promise, without
+opening up new reentrancy hazards with untrusted thenables. If possible,
+we'd also like to native adoption of userland promises faster, but this
+will only be done if we can determine that it's web compatible.
 
-  [explainer]: https://github.com/tc39/how-we-work/blob/HEAD/explainer.md
+[jridgewell]: https://github.com/jridgewell
