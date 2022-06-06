@@ -42,4 +42,9 @@ opening up new reentrancy hazards with untrusted thenables. If possible,
 we'd also like to native adoption of userland promises faster, but this
 will only be done if we can determine that it's web compatible.
 
+## Links
+
+- June 2022 Committee Meeting: [slides][2022-06-slides], notes (pending publish).
+
 [jridgewell]: https://github.com/jridgewell
+[2022-06-slides]: https://docs.google.com/presentation/d/17QGvaa6G1XIc4LJj3ZvcjyVLwL6pXvG9Nk6S_eAgBiY/edit?usp=sharing
